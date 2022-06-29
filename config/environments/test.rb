@@ -7,7 +7,14 @@ require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
-
+  config.action_mailer.default_url_options = { :host => "localhost:3000", :protocol => "http" }
+  config.action_mailer.delivery_method = :mailgun
+  config.action_mailer.mailgun_settings = {
+    api_key: ENV['MAILGUN_API_KEY'],
+    domain: ENV['DOMAIN_NAME'],
+    host: 'localhost:3000'
+    # api_host: 'api.eu.mailgun.net'  # Uncomment this line for EU region domains
+  }
   # Turn false under Spring and add config.action_view.cache_template_loading = true.
   config.cache_classes = true
 
