@@ -1,6 +1,5 @@
-<h1><%= t('.sign_up') %></h1>
-
-<%= form_for(resource, as: resource_name, url: registration_path(resource_name)) do |f| %>
+<%= form_for(resource, as: resource_name, url: registration_path(resource_name),
+             html: { role: "form", class: "cc_form" }) do |f| %>
   <%= bootstrap_devise_error_messages! %>
 
   <div class="form-group">
@@ -22,9 +21,94 @@
     <%= f.password_field :password_confirmation, autocomplete: 'current-password', class: 'form-control' %>
   </div>
 
+  <div class="row">
+    <div class="form-group col-md-6">
+      <div id="<%= :card %>"></div>
+      <div id="card-errors"></div>
+    </div>
+  </div>
+
   <div class="form-group">
     <%= f.submit t('.sign_up'), class: 'btn btn-primary' %>
   </div>
 <% end %>
+
+<script type="text/javascript">
+    $(document).on('ready turbolinks:load', function(){
+        var show_error, submitHandler;
+
+        show_error = function (message) {
+            console.log(message);
+            if(!$("#flash-messages").length){
+                $('#main').prepend("<div id='flash-messages'></div>");
+            }
+
+            $("#flash-messages").html('<div class="alert alert-warning"><a class="close" data-dismiss="alert">×</a><div id="flash_alert">' + message + '</div></div>');
+            $('.alert').delay(5000).fadeOut(3000);
+
+            return false;
+        };
+
+        function stripeTokenHandler(token, form){
+            form.append($("<input type=\"hidden\" name=\"payment[token]\" />").val(token.id));
+            form.get(0).submit();
+        };
+
+        function createToken(form){
+            stripe.createToken(card).then(function(result) {
+                if(result.error){
+                    show_error(result.error.message);
+                    form.find("input[type=submit]").prop("disabled", false);
+                } else {
+                    stripeTokenHandler(result.token, form);
+                }
+            });
+        };
+
+        submitHandler = function(event){
+            event.preventDefault();
+
+            var $form = $(event.target);
+            $form.find("input[type=submit]").prop("disabled", true);
+
+            //If Stripe was initialized correctly this will create a token using the credit card info
+            if(stripe){
+                createToken($form);
+            }else{
+                show_error("Failed to load credit card processing functionality. Please reload this page in your browser.");
+            }
+        };
+
+        $(".cc_form").on("submit", submitHandler);
+
+        if(typeof card !== 'undefined'){
+            card.addEventListener('change', function(event) {
+                var displayError = document.getElementById('card-errors');
+                if (event.error) {
+                    displayError.textContent = event.error.message;
+                } else {
+                    displayError.textContent = '';
+                }
+            });
+        }
+    });
+    var stripe = Stripe("<%= ENV['STRIPE_PUBLISHABLE_KEY'] %>");
+    var elements = stripe.elements();
+
+    var card = elements.create('card', {
+        'style': {
+            'base': {
+                'fontFamily': 'Arial, sans-serif',
+                'fontSize': '18px',
+                'color': '#C1C7CD',
+            },
+            'invalid': {
+                'color': 'red',
+            },
+        }
+    });
+
+    card.mount("#<%= :card %>");
+</script>
 
 <%= render 'devise/shared/links' %>
